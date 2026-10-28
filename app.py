@@ -64,9 +64,10 @@ st.markdown(
 <style>
 :root{
   --blue:#4F8EF7; --blue-soft:#E8F1FF; --purple:#8B7CF6; --purple-soft:#F1EEFF;
-  --ink:#27304A; --muted:#6B7391; --white:#FFFFFF;
+  --ink:#000000; --muted:#222222; --white:#FFFFFF;
 }
-.stApp{ background:linear-gradient(160deg,#F4F8FF 0%,#FFFFFF 45%,#F6F2FF 100%); color:var(--ink); }
+html{ color-scheme:light; }
+.stApp{ background:#FFFFFF; color:#000000; }
 .block-container{ padding-top:2rem; padding-bottom:3rem; max-width:1150px; }
 section[data-testid="stSidebar"]{ background:linear-gradient(180deg,#EAF2FF,#F3EFFF); }
 h1,h2,h3{ color:var(--ink); }
@@ -98,6 +99,40 @@ div[data-testid="stMetric"]{ background:#fff; border:1px solid #E6EBFA; border-r
   .block-container{ padding-left:1rem; padding-right:1rem; }
   .hero{ padding:1.4rem 1.1rem; } .hero h1{ font-size:1.6rem; } .word-title{ font-size:1.6rem; }
 }
+
+/* ===== Make text clear: white background, black text ===== */
+[data-testid="stHeader"], [data-testid="stBottom"], [data-testid="stBottom"] > div{ background:#FFFFFF !important; }
+.stApp h1,.stApp h2,.stApp h3,.stApp h4,.stApp h5,.stApp h6,
+.stApp [data-testid="stMarkdownContainer"] p,
+.stApp [data-testid="stMarkdownContainer"] li,
+.stApp [data-testid="stMarkdownContainer"] strong,
+.stApp label, .stApp label p,
+.stApp [data-testid="stWidgetLabel"] p,
+.stApp [data-testid="stMetricLabel"] *, .stApp [data-testid="stMetricValue"] *,
+.stApp [data-testid="stExpander"] summary, .stApp [data-testid="stExpander"] summary p,
+.stApp button[data-baseweb="tab"] p,
+.stApp [data-testid="stChatMessage"] p,
+.stApp [data-testid="stRadio"] p{ color:#000000 !important; }
+.stApp [data-testid="stCaptionContainer"], .stApp [data-testid="stCaptionContainer"] p{ color:#222222 !important; }
+/* keep white text on colored areas */
+.stApp .hero h1, .stApp .hero p{ color:#FFFFFF !important; }
+.stApp .stButton button p, .stApp .stFormSubmitButton button p, .stApp .stButton button, .stApp .stFormSubmitButton button{ color:#FFFFFF !important; }
+.stApp p.word-title{ color:#2F4FC4 !important; }
+/* input boxes */
+.stApp textarea, .stApp input, [data-testid="stChatInput"] textarea{
+  color:#000000 !important; -webkit-text-fill-color:#000000 !important; background:#FFFFFF !important; }
+.stApp textarea, .stApp input{ border:1px solid #B9C6F2 !important; border-radius:10px !important; }
+.stApp textarea::placeholder, .stApp input::placeholder{ color:#555555 !important; -webkit-text-fill-color:#555555 !important; }
+[data-testid="stChatInput"]{ background:#FFFFFF !important; border:1px solid #B9C6F2; border-radius:14px; }
+.stApp div[data-baseweb="select"] > div{ background:#FFFFFF !important; color:#000000 !important; border:1px solid #B9C6F2 !important; }
+.stApp div[data-baseweb="select"] *{ color:#000000 !important; }
+div[data-baseweb="popover"] *, ul[role="listbox"] *{ color:#000000 !important; background-color:#FFFFFF !important; }
+/* cards, chat, expanders, alerts */
+.stApp [data-testid="stChatMessage"]{ background:#F7F9FF !important; border:1px solid #E6EBFA; border-radius:14px; }
+.stApp [data-testid="stExpander"]{ background:#FFFFFF !important; border:1px solid #E6EBFA; border-radius:12px; }
+.stApp [data-testid="stAlert"]{ background:#F1EEFF !important; border:1px solid #DDD6FF; }
+.stApp [data-testid="stAlert"] *{ color:#000000 !important; }
+section[data-testid="stSidebar"] *{ color:#000000; }
 </style>
 """,
     unsafe_allow_html=True,
