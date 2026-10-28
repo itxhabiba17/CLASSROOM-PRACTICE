@@ -30,7 +30,9 @@ from groq import (
     APIConnectionError,
     APIStatusError,
     AuthenticationError,
+    BadRequestError,
     Groq,
+    NotFoundError,
     RateLimitError,
 )
 
@@ -40,6 +42,15 @@ from groq import (
 APP_NAME = "EnglishBuddy"
 DB_PATH = os.getenv("ENGLISHBUDDY_DB", "englishbuddy.db")
 MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+FALLBACK_MODELS = [
+    "llama-3.3-70b-versatile",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "llama-3.1-8b-instant",
+    "meta-llama/llama-4-scout-17b-16e-instruct",
+    "qwen/qwen3-32b",
+]
+NOT_CHAT_WORDS = ("whisper", "guard", "tts", "playai", "orpheus", "embed", "safeguard")
 MAX_TEXT_CHARS = 1500
 MAX_CHAT_CHARS = 500
 
@@ -266,6 +277,40 @@ def make_client(key):
     return Groq(api_key=key)
 
 
+@st.cache_resource(show_spinner=False)
+def available_models(key):
+    """Ask Groq which models this key can use."""
+    return [m.id for m in make_client(key).models.list().data]
+
+
+def pick_model(key, bad):
+    """Choose a working chat model that is not in the 'bad' list."""
+    try:
+        ids = available_models(key)
+    except Exception:  # noqa: BLE001
+        ids = []
+    chat_ids = [i for i in ids if not any(w in i.lower() for w in NOT_CHAT_WORDS)]
+    for name in [MODEL] + FALLBACK_MODELS:
+        if name in chat_ids and name not in bad:
+            return name
+    for name in chat_ids:
+        if name not in bad:
+            return name
+    return None
+
+
+def parse_json(text):
+    try:
+        data = json.loads(text)
+    except Exception:  # noqa: BLE001
+        t = (text or "").strip().strip("`")
+        a, b = t.find("{"), t.rfind("}")
+        data = json.loads(t[a:b + 1])
+    if not isinstance(data, dict):
+        raise ValueError("not a JSON object")
+    return data
+
+
 def ask_json(system, user=None, messages=None, temperature=0.3, max_tokens=1800):
     """Call Groq and return parsed JSON. Raises AIError with a friendly message on any problem."""
     key = read_api_key()
@@ -276,29 +321,44 @@ def ask_json(system, user=None, messages=None, temperature=0.3, max_tokens=1800)
         )
     msgs = [{"role": "system", "content": system + "\nReturn ONLY one valid JSON object. No extra text."}]
     msgs += messages if messages else [{"role": "user", "content": user}]
+    client = make_client(key)
+    bad, use_json_mode, resp = set(), True, None
+    for _ in range(4):
+        model = st.session_state.get("active_model", MODEL)
+        kwargs = dict(model=model, messages=msgs, temperature=temperature, max_tokens=max_tokens)
+        if use_json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        try:
+            resp = client.chat.completions.create(**kwargs)
+            break
+        except NotFoundError:
+            bad.add(model)
+            new_model = pick_model(key, bad)
+            if not new_model:
+                raise AIError(
+                    f"The AI model '{model}' was not found and I could not find another model for your key. "
+                    "Please check your Groq account and your GROQ_MODEL setting."
+                )
+            st.session_state.active_model = new_model
+        except BadRequestError as e:
+            if use_json_mode and "json" in str(e).lower():
+                use_json_mode = False  # this model cannot use JSON mode, try again without it
+                continue
+            raise AIError(f"The AI did not accept the request: {getattr(e, 'message', str(e))[:200]}")
+        except AuthenticationError:
+            raise AIError("The AI key is not valid. Please check your GROQ_API_KEY.")
+        except RateLimitError:
+            raise AIError("Too many requests right now. Please wait a minute and try again.")
+        except APIConnectionError:
+            raise AIError("I could not reach the AI service. Please check your internet and try again.")
+        except APIStatusError as e:
+            raise AIError(f"The AI service had a problem (code {e.status_code}, model {model}). Please try again.")
+        except Exception as e:  # noqa: BLE001
+            raise AIError(f"Something went wrong while contacting the AI: {type(e).__name__}.")
+    if resp is None:
+        raise AIError("I could not get an answer from the AI. Please try again.")
     try:
-        resp = make_client(key).chat.completions.create(
-            model=MODEL,
-            messages=msgs,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            response_format={"type": "json_object"},
-        )
-    except AuthenticationError:
-        raise AIError("The AI key is not valid. Please check your GROQ_API_KEY.")
-    except RateLimitError:
-        raise AIError("Too many requests right now. Please wait a minute and try again.")
-    except APIConnectionError:
-        raise AIError("I could not reach the AI service. Please check your internet and try again.")
-    except APIStatusError as e:
-        raise AIError(f"The AI service had a problem (code {e.status_code}). Please try again.")
-    except Exception as e:  # noqa: BLE001
-        raise AIError(f"Something went wrong while contacting the AI: {type(e).__name__}.")
-    try:
-        data = json.loads(resp.choices[0].message.content)
-        if not isinstance(data, dict):
-            raise ValueError
-        return data
+        return parse_json(resp.choices[0].message.content)
     except Exception:  # noqa: BLE001
         raise AIError("The AI sent an answer I could not read. Please press the button again.")
 
@@ -1014,7 +1074,7 @@ with st.sidebar:
         st.success("AI is ready ✅")
     else:
         st.error("AI key not found. Set GROQ_API_KEY and restart the app.")
-    st.caption(f"Model: {MODEL}")
+    st.caption(f"Model: {st.session_state.get('active_model', MODEL)}")
 
 ROUTES = {
     "🏠 Home": page_home,
