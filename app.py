@@ -144,6 +144,17 @@ div[data-baseweb="popover"] *, ul[role="listbox"] *{ color:#000000 !important; b
 .stApp [data-testid="stAlert"]{ background:#F1EEFF !important; border:1px solid #DDD6FF; }
 .stApp [data-testid="stAlert"] *{ color:#000000 !important; }
 section[data-testid="stSidebar"] *{ color:#000000; }
+
+/* ===== Conversation: clear correction / suggestion boxes ===== */
+.stApp .fix-box, .stApp .tip-box{ border-radius:12px; padding:.75rem 1rem; margin-top:.6rem; font-size:1rem;
+  line-height:1.6; color:#000000 !important; }
+.stApp .fix-box{ background:#E6DEFF; border:1px solid #B9A9F5; border-left:6px solid #6D5BE8; }
+.stApp .tip-box{ background:#DCEAFF; border:1px solid #A9C7F7; border-left:6px solid #2F6FE4; }
+.stApp .fix-box *, .stApp .tip-box *,
+.stApp .soft-blue, .stApp .soft-blue *, .stApp .soft-purple, .stApp .soft-purple *,
+.stApp .compare-box, .stApp .compare-box *{ color:#000000 !important; }
+.stApp .fix-box b, .stApp .tip-box b{ font-weight:800; }
+.stApp .compare-box .del{ color:#B42318 !important; } .stApp .compare-box .add{ color:#15692F !important; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -933,9 +944,9 @@ def page_conversation():
             with st.chat_message("assistant", avatar="🎓"):
                 st.write(m["reply"])
                 if m.get("correction"):
-                    st.markdown(f"<div class='soft-purple'>✏️ {html.escape(m['correction'])}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='fix-box'>✏️ <b>Correction:</b> {html.escape(m['correction'])}</div>", unsafe_allow_html=True)
                 if m.get("suggestion"):
-                    st.markdown(f"<div class='soft-blue' style='margin-top:.4rem'>💡 More natural: {html.escape(m['suggestion'])}</div>",
+                    st.markdown(f"<div class='tip-box'>💡 <b>More natural:</b> {html.escape(m['suggestion'])}</div>",
                                 unsafe_allow_html=True)
 
     user_msg = st.chat_input("Type your answer in English...", max_chars=MAX_CHAT_CHARS)
